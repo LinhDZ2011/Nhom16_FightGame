@@ -15,6 +15,8 @@ public class FightingController : MonoBehaviour
     public int attackDamage = 5;
     public string[] attackAnimations = { "Attack1Animation", "Attack2Animation", "Attack3Animation", "Attack4Animation" };
     public float dodgeDistance = 2f;
+    public float attackRadius = 2.2f;
+    public Transform[] opponents;
     private float lastAttackTime;
 
     [Header("Effects and sounds")]
@@ -23,8 +25,15 @@ public class FightingController : MonoBehaviour
     public ParticleSystem attack3Effect;
     public ParticleSystem attack4Effect;
 
+    public AudioClip[] hitSounds;
+
+    [Header("Health")]
+    public int maxHealth = 100;
+    public int currentHealth;
+
     void Awake()
     {
+        currentHealth = maxHealth;
         characterController = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
     }
@@ -99,6 +108,13 @@ public class FightingController : MonoBehaviour
             lastAttackTime = Time.time;
 
             //Loop through each opponent
+            foreach (Transform opponent in opponents)
+            {
+                if (Vector3.Distance(transform.position, opponent.position) <= attackRadius)
+                {
+                    opponent.GetComponent<OpponentAI>().StartCoroutine(opponent.GetComponent<OpponentAI>().PlayHitDamageAnimation(attackDamage));
+                }
+            }
         }
         else
         {
@@ -115,6 +131,31 @@ public class FightingController : MonoBehaviour
 
             characterController.Move(dodgeDiretion);
         }
+    }
+
+    public IEnumerator PlayHitDamageAnimation(int takeDamage)
+    {
+        yield return new WaitForSeconds(0.5f);
+
+        if (hitSounds != null && hitSounds.Length > 0)
+        {
+            int randonIndex = Random.Range(0, hitSounds.Length);
+            AudioSource.PlayClipAtPoint(hitSounds[randonIndex], transform.position);
+        }
+
+        currentHealth -= takeDamage;
+
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+
+        animator.Play("HitDamageAnimation");
+    }
+
+    void Die()
+    {
+        Debug.Log("Player died.");
     }
 
     public void Attack1Effect()
