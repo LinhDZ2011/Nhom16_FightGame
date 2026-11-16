@@ -7,6 +7,16 @@ public class CameraController : MonoBehaviour
     public Transform[] targets;
     public float smoothSpeed = 0.125f;
     public Vector3 offset;
+    public float defaultCameraHeight = 2.23f;
+
+    void Start()
+    {
+        // Ensure camera starts at proper fighting height if saved close to ground
+        if (transform.position.y < 1.0f)
+        {
+            transform.position = new Vector3(transform.position.x, defaultCameraHeight, transform.position.z);
+        }
+    }
 
     void LateUpdate()
     {
@@ -19,7 +29,7 @@ public class CameraController : MonoBehaviour
             return;
 
         Vector3 desiredPosition = activeTarget.position + offset;
-        desiredPosition.y = transform.position.y;
+        desiredPosition.y = transform.position.y > 0.5f ? transform.position.y : defaultCameraHeight;
 
         Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed);
         transform.position = smoothedPosition;
@@ -34,3 +44,4 @@ public class CameraController : MonoBehaviour
         return null;
     }
 }
+// Camera

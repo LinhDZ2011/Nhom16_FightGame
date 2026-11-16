@@ -15,6 +15,8 @@ public class FightingController : MonoBehaviour
     public int attackDamage = 5;
     public string[] attackAnimations = { "Attack1Animation", "Attack2Animation", "Attack3Animation", "Attack4Animation" };
     public float dodgeDistance = 2f;
+    public float attackRadius = 2.2f;
+    public Transform[] opponents;
     private float lastAttackTime;
 
     [Header("Effects and sounds")]
@@ -23,8 +25,20 @@ public class FightingController : MonoBehaviour
     public ParticleSystem attack3Effect;
     public ParticleSystem attack4Effect;
 
+    public AudioClip[] hitSounds;
+
+    [Header("Health")]
+    public int maxHealth = 100;
+    public int currentHealth;
+    public HealthBar healthBar;
+
     void Awake()
     {
+        currentHealth = maxHealth;
+        if (healthBar != null)
+        {
+            healthBar.GiveFullHealth(currentHealth);
+        }
         characterController = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
     }
@@ -83,22 +97,41 @@ public class FightingController : MonoBehaviour
             animator.SetBool("Walking", false);
         }
 
-        characterController.Move(movement * movementSpeed * Time.deltaTime);
-
+        if (characterController != null)
+        {
+            characterController.Move(movement * movementSpeed * Time.deltaTime);
+        }
     }
 
     void PerformAttack(int attackIndex)
     {
         if (Time.time - lastAttackTime > attackCooldown)
         {
-            animator.Play(attackAnimations[attackIndex]);
+            if (animator != null && attackAnimations != null && attackIndex >= 0 && attackIndex < attackAnimations.Length)
+            {
+                animator.Play(attackAnimations[attackIndex]);
+            }
 
             int damage = attackDamage;
             Debug.Log("Performed attack" + (attackIndex + 1) + "dealing" + damage + "damage");
 
             lastAttackTime = Time.time;
 
-            //Loop through each opponent
+            if (opponents != null)
+            {
+                //Loop through each opponent
+                foreach (Transform opponent in opponents)
+                {
+                    if (opponent != null && Vector3.Distance(transform.position, opponent.position) <= attackRadius)
+                    {
+                        OpponentAI opponentAI = opponent.GetComponent<OpponentAI>();
+                        if (opponentAI != null)
+                        {
+                            opponentAI.StartCoroutine(opponentAI.PlayHitDamageAnimation(attackDamage));
+                        }
+                    }
+                }
+            }
         }
         else
         {
@@ -109,28 +142,66 @@ public class FightingController : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.E))
         {
-            animator.Play("DodgeFrontAnimation");
+            if (animator != null)
+            {
+                animator.Play("DodgeFrontAnimation");
+            }
 
             Vector3 dodgeDiretion = transform.forward * dodgeDistance;
 
-            characterController.Move(dodgeDiretion);
+            if (characterController != null)
+            {
+                characterController.Move(dodgeDiretion);
+            }
         }
+    }
+
+    public IEnumerator PlayHitDamageAnimation(int takeDamage)
+    {
+        yield return new WaitForSeconds(0.5f);
+
+        if (hitSounds != null && hitSounds.Length > 0)
+        {
+            int randonIndex = Random.Range(0, hitSounds.Length);
+            AudioSource.PlayClipAtPoint(hitSounds[randonIndex], transform.position);
+        }
+
+        currentHealth -= takeDamage;
+        if (healthBar != null)
+        {
+            healthBar.SetHealth(currentHealth);
+        }
+
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+
+        if (animator != null)
+        {
+            animator.Play("HitDamageAnimation");
+        }
+    }
+
+    void Die()
+    {
+        Debug.Log("Player died.");
     }
 
     public void Attack1Effect()
     {
-        attack1Effect.Play();
+        if (attack1Effect != null) attack1Effect.Play();
     }
     public void Attack2Effect()
     {
-        attack2Effect.Play();
+        if (attack2Effect != null) attack2Effect.Play();
     }
     public void Attack3Effect()
     {
-        attack3Effect.Play();
+        if (attack3Effect != null) attack3Effect.Play();
     }
     public void Attack4Effect()
     {
-        attack4Effect.Play();
+        if (attack4Effect != null) attack4Effect.Play();
     }
 }
